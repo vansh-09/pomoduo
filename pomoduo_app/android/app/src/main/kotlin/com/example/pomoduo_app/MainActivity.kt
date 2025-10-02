@@ -2,4 +2,5 @@ package com.example.pomoduo_app
 
 import io.flutter.embedding.android.FlutterActivity
 
-class MainActivity: FlutterActivity()
+class MainActivity: FlutterActivity() {
+}
