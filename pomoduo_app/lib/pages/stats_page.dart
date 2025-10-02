@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../db/session_db.dart';
 import '../models/session.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -14,6 +16,10 @@ class _StatsPageState extends State<StatsPage> {
   double averageDurationMinutes = 0.0;
   bool isLoading = true;
 
+  List<DateTime> days = [];
+  Map<DateTime, int> sessionsPerDay = {};
+  Map<DateTime, double> sessionTimePerDay = {};
+
   @override
   void initState() {
     super.initState();
@@ -24,7 +30,27 @@ class _StatsPageState extends State<StatsPage> {
     try {
       List<Session> sessions = await SessionDB.instance.fetchSessions();
       if (sessions.isNotEmpty) {
-        // Calculate total duration in minutes
+        // Get days for last 7 days
+        final now = DateTime.now();
+        days = List.generate(
+          7,
+          (i) => DateTime(now.year, now.month, now.day - (6 - i)),
+        );
+
+        // Group sessions and time per day
+        for (var d in days) {
+          sessionsPerDay[d] = 0;
+          sessionTimePerDay[d] = 0.0;
+        }
+
+        for (var session in sessions) {
+          final day = DateTime(session.startTime.year, session.startTime.month, session.startTime.day);
+          if (sessionsPerDay.containsKey(day)) {
+            sessionsPerDay[day] = sessionsPerDay[day]! + 1;
+            sessionTimePerDay[day] = sessionTimePerDay[day]! + session.duration.inMinutes;
+          }
+        }
+
         double totalDurationMinutes = sessions.fold(
             0.0, (sum, session) => sum + session.duration.inMinutes.toDouble());
 
@@ -98,7 +124,7 @@ class _StatsPageState extends State<StatsPage> {
                 )
               else
                 Expanded(
-                  child: Column(
+                  child: ListView(
                     children: [
                       _buildStatCard(
                         'Total Sessions',
@@ -116,6 +142,118 @@ class _StatsPageState extends State<StatsPage> {
                         'Total Focus Time',
                         '${(totalSessions * 25)} min',
                         Icons.access_time,
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Sessions Per Day (Last 7 Days)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 180,
+                        child: BarChart(
+                          BarChartData(
+                            barGroups: List.generate(days.length, (i) {
+                              return BarChartGroupData(
+                                x: i,
+                                barRods: [
+                                  BarChartRodData(
+                                    toY: (sessionsPerDay[days[i]] ?? 0).toDouble(),
+                                    color: Theme.of(context).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ],
+                              );
+                            }),
+                            titlesData: FlTitlesData(
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    int idx = value.toInt();
+                                    if (idx < 0 || idx >= days.length) return Container();
+                                    String dayLabel = DateFormat('EEE').format(days[idx]);
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(dayLabel,
+                                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              topTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                            ),
+                            gridData: FlGridData(show: false),
+                            borderData: FlBorderData(show: false),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      Text(
+                        'Sessioned Time Per Day (Last 7 Days)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 180,
+                        child: LineChart(
+                          LineChartData(
+                            lineBarsData: [
+                              LineChartBarData(
+                                color: Colors.orangeAccent,
+                                spots: List.generate(days.length, (i) =>
+                                    FlSpot(i.toDouble(), (sessionTimePerDay[days[i]] ?? 0.0))),
+                                isCurved: true,
+                                barWidth: 3,
+                                dotData: FlDotData(show: true),
+                              ),
+                            ],
+                            titlesData: FlTitlesData(
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  getTitlesWidget: (value, meta) {
+                                    int idx = value.toInt();
+                                    if (idx < 0 || idx >= days.length) return Container();
+                                    String dayLabel = DateFormat('EEE').format(days[idx]);
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: Text(dayLabel,
+                                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              topTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                              rightTitles: AxisTitles(
+                                sideTitles: SideTitles(showTitles: false),
+                              ),
+                            ),
+                            gridData: FlGridData(show: false),
+                            borderData: FlBorderData(show: false),
+                          ),
+                        ),
                       ),
                     ],
                   ),
