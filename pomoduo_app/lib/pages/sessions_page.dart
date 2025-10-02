@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'session_history_page.dart';
+import 'session_history_calendar.dart';
 
 class SessionsPage extends StatelessWidget {
   const SessionsPage({super.key});
@@ -8,7 +8,7 @@ class SessionsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Sessions")),
-      body: const SessionHistoryPage(),
+      body: const SessionHistoryCalendar(),
     );
   }
 }
